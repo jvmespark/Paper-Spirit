@@ -170,14 +170,8 @@ function setupSocketServer() {
       // emit an 'opponentJoined' event to the room to tell the other player that an opponent has joined
       socket.to(args.roomId).emit('opponentJoined', roomUpdate);
     });
-    socket.on('getPlayer', async (args, callback) => {
-      const room = rooms.get(args.roomId)
-      if (room.online < 2) {
-        callback(1)
-      }
-      else {
-        callback(2)
-      }
+    socket.on('getRooms', async (callback) => {
+      callback(rooms)
     })
   });
 }
