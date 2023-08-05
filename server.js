@@ -16,6 +16,7 @@ const server = app.listen(port);
 console.log("Server is running on http://localhost:" + port);
 
 const io = require("socket.io")().listen(server);
+app.set('socketio', io);
 
 const ejs = require('ejs');
 
@@ -169,6 +170,15 @@ function setupSocketServer() {
       // emit an 'opponentJoined' event to the room to tell the other player that an opponent has joined
       socket.to(args.roomId).emit('opponentJoined', roomUpdate);
     });
+    socket.on('getPlayer', async (args, callback) => {
+      const room = rooms.get(args.roomId)
+      if (room.online < 2) {
+        callback(1)
+      }
+      else {
+        callback(2)
+      }
+    })
   });
 }
 
@@ -179,13 +189,13 @@ function setupSocketServer() {
 
 
 app.get('/', (req, res) => {
-  //res.render('index.html')
-  res.render('arena.html')
+  res.render('index.html')
+  //res.render('arena.html')
 })
 
-/* 
-COMMENTED OUT FOR DEV PURPOSES
-REINSTATE LATER 
+
+//COMMENTED OUT FOR DEV PURPOSES
+//REINSTATE LATER 
 
 
 app.get('/arena', (req, res) => {
@@ -205,7 +215,7 @@ app.get('/arena/:id', (req, res) => {
     res.render('404.html')
   }
 });
-*/
+
 
 app.get('/*', (req, res) => {
 

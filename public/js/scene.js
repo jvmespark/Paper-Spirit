@@ -48,7 +48,7 @@ class Scene {
     window.addEventListener("keyup", (e) => this.onKeyUp(e), false);
 
     // Helpers
-    this.scene.add(new THREE.GridHelper(500, 500));
+    this.scene.add(new THREE.GridHelper(100, 100));
     this.scene.add(new THREE.AxesHelper(10));
 
     this.addLights();
@@ -75,7 +75,7 @@ class Scene {
     // let characterMaterial = getCharacterMaterial( id for the character ex: goblin);
 
     let _head = new THREE.Mesh(new THREE.PlaneGeometry(2, 2.5, 2), ); // put character material in empty spot
-
+    
     _head.position.set(0, 0.75, 0);
 
     // https://threejs.org/docs/index.html#api/en/objects/Group

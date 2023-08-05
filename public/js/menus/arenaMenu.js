@@ -4,7 +4,6 @@ let socket;
 function createRoom() {
 
     socket = io();
-
     socket.emit("createRoom", (r) => {
         console.log(r);
         window.location.href = 'http://localhost:8080/arena/' + r;
