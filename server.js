@@ -39,15 +39,21 @@ function main() {
 
   setInterval(function () {
     // update all clients of positions
-    io.sockets.emit("positions", peers);
+    // io.sockets.broadcast.to(every room id).emit("positions", peers[roomId])
+    //io.sockets.emit("positions", peers);
+    for (let [key, value] of rooms) {
+      io.sockets.to(key).emit('positions', value.peers);
+    }
   }, 10);
 }
 
 main();
 
 function setupSocketServer() {
+
   // Set up each socket connection
   io.on("connection", (socket) => {
+    /*
     console.log(
       "Peer joined with ID",
       socket.id,
@@ -63,6 +69,10 @@ function setupSocketServer() {
     };
 
     // Make sure to send the client their ID and a list of ICE servers for WebRTC network traversal
+    // socket.broadcast.to(every room id).emit(....)
+    for (let [key, value] of rooms) {
+      socket.to(key).emit('introduction', Object.keys(value.peers));
+    }
     socket.emit(
       "introduction",
       Object.keys(peers)
@@ -70,6 +80,9 @@ function setupSocketServer() {
 
     // also give the client all existing clients positions:
     socket.emit("userPositions", peers);
+    for (let [key, value] of rooms) {
+      socket.to(key).emit('userPositions', value.peers);
+    }
 
     //Update everyone that the number of users has changed
     io.emit(
@@ -78,10 +91,10 @@ function setupSocketServer() {
     );
 
     // whenever the client moves, update their movements in the clients object
-    socket.on("move", (data) => {
-      if (peers[socket.id]) {
-        peers[socket.id].position = data[0];
-        peers[socket.id].rotation = data[1];
+    socket.on("move", (data, roomId) => {
+      if (rooms.get(roomId).peers[socket.id]) {
+        rooms.get(roomId).peers[socket.id].position = data[0];
+        rooms.get(roomId).peers[socket.id].rotation = data[1];
       }
     });
 
@@ -112,21 +125,67 @@ function setupSocketServer() {
         " clients connected"
       );
     });
+    */
+    // Make sure to send the client their ID and a list of ICE servers for WebRTC network traversal
+    // socket.broadcast.to(every room id).emit(....)
+    
+    //for (let [key, value] of rooms) {
+    //  io.emit('introduction', Object.keys({}));
+    //}
+    
+    for (let [key, value] of rooms) {
+      io.to(key).emit('userPositions', value.peers);
+    }
+    
+    // Relay simple-peer signals back and forth
+    socket.on("signal", (to, from, data) => {
+      if (to in peers) {
+        io.to(to).emit("signal", to, from, data);
+      } else {
+        console.log("Peer not found!");
+      }
+    });
+    // whenever the client moves, update their movements in the clients object
+    socket.on("move", (data, roomId) => {
+      if (rooms.get(roomId).peers[socket.id]) {
+        rooms.get(roomId).peers[socket.id].position = data[0];
+        rooms.get(roomId).peers[socket.id].rotation = data[1];
+      }
+    });
+    socket.on("test", () => {
+      console.log("test")
+    })
 
     // create Room
     socket.on('createRoom', async (callback) => {
       const roomId = uuidV4()
       await socket.join(roomId)
+
       if (!rooms.get(roomId)) {
         rooms.set(roomId, {
           roomId,
           players: [{ id: socket.id}],
-          online: 0,
+          online: 1,
+          peers: {}
         });
+        rooms.get(roomId).peers[socket.id] = {
+          position: [0, 0.5, 0],
+          rotation: [0, 0, 0, 1], // stored as XYZW values of Quaternion
+        };
+
         callback(roomId);
+
+        io.to(roomId).emit('introduction', Object.keys(rooms.get(roomId).peers));
+        io.to(roomId).emit('newUserConnected', socket.id)
       }
       else {
         rooms.get(roomId).players.push({id: socket.id})
+        rooms.get(roomId).peers[socket.id] = {
+          position: [0, 0.5, 0],
+          rotation: [0, 0, 0, 1], // stored as XYZW values of Quaternion
+        };
+        io.to(roomId).emit('introduction', Object.keys(rooms.get(roomId).peers));
+        io.to(roomId).emit('newUserConnected', socket.id)
       }
     });
     // join room
@@ -160,19 +219,24 @@ function setupSocketServer() {
           ...room.players,
           { id: socket.id, username: socket.data?.username },
         ],
+        online: room.online + 1,
+        peers: {...room.peers}
       };
-      room.online += 1
   
       rooms.set(args.roomId, roomUpdate);
+      
+      rooms.get(args.roomId).peers[socket.id] = {
+        position: [0, 0.5, 0],
+        rotation: [0, 0, 0, 1], // stored as XYZW values of Quaternion
+      };
+
   
       callback(roomUpdate); // respond to the client with the room details.
+
+      io.to(args.roomId).emit('introduction', Object.keys(rooms.get(args.roomId).peers));
+      io.to(args.roomId).emit('newUserConnected', socket.id)
   
-      // emit an 'opponentJoined' event to the room to tell the other player that an opponent has joined
-      socket.to(args.roomId).emit('opponentJoined', roomUpdate);
     });
-    socket.on('getRooms', async (callback) => {
-      callback(rooms)
-    })
   });
 }
 
@@ -200,8 +264,7 @@ app.get('/arena', (req, res) => {
 
 app.get('/arena/:id', (req, res) => {
   const roomId = req.params.id
-  if (rooms.get(roomId) && rooms.has(roomId) && rooms.get(roomId).online+1 <= 2) {
-    rooms.get(roomId).online += 1
+  if (rooms.get(roomId) && rooms.has(roomId) && rooms.get(roomId).online <= 2) {
     res.render('arena.html')
   }
   else {

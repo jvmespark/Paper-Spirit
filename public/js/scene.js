@@ -74,7 +74,7 @@ class Scene {
   addSelf() {
     // let characterMaterial = getCharacterMaterial( id for the character ex: goblin);
 
-    let _head = new THREE.Mesh(new THREE.PlaneGeometry(2, 2.5, 2), ); // put character material in empty spot
+    let _head = new THREE.Mesh(new THREE.PlaneGeometry(2, 2.5, 2), new THREE.MeshBasicMaterial({color: 0x0000FF})); // put character material in empty spot
     
     _head.position.set(0, 0.75, 0);
 

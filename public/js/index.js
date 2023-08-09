@@ -33,6 +33,7 @@ let mediaConstraints = {
 
 window.onload = async () => {
   console.log("Window loaded.");
+  var roomId = window.location.href.substring(window.location.href.lastIndexOf('/') + 1);
 
   // first get user media
   localMediaStream = await getMedia(mediaConstraints);
@@ -40,7 +41,7 @@ window.onload = async () => {
   //createLocalVideoElement();
 
   // then initialize socket connection
-  initSocketConnection();
+  initSocketConnection(roomId);
 
   // finally create the threejs scene
   console.log("Creating three.js scene...");
@@ -70,7 +71,7 @@ async function getMedia(_mediaConstraints) {
 ////////////////////////////////////////////////////////////////////////////////
 
 // establishes socket connection
-function initSocketConnection() {
+function initSocketConnection(roomId) {
   console.log("Initializing socket.io...");
   mySocket = io();
 
@@ -80,7 +81,7 @@ function initSocketConnection() {
 
   //On connection server sends the client his ID and a list of all keys
   mySocket.on("introduction", (otherClientIds) => {
-
+    console.log("HERE")
     // for each existing user, add them as a client and add tracks to their peer connection
     for (let i = 0; i < otherClientIds.length; i++) {
       if (otherClientIds[i] != mySocket.id) {
@@ -94,6 +95,7 @@ function initSocketConnection() {
 
         //createClientMediaElements(theirId);
 
+        // glScene.addClient(clientModel(theirId))
         glScene.addClient(theirId);
 
       }
@@ -217,5 +219,6 @@ function enableOutgoingStream() {
 
 function onPlayerMove() {
   // console.log('Sending movement update to server.');
-  mySocket.emit("move", glScene.getPlayerPosition());
+  var roomId = window.location.href.substring(window.location.href.lastIndexOf('/') + 1)
+  mySocket.emit("move", glScene.getPlayerPosition(), roomId);
 }
